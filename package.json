@@ -2,9 +2,10 @@
   "name": "rxjs-unit-testing",
   "version": "0.0.0",
   "description": "An exploration of unit testing RXJS with Jest.",
-  "main": "index.ts",
+  "main": "./lib/index.js",
+  "type": "module",
   "scripts": {
-    "start": "nodemon index.ts",
+    "start": "nodemon",
     "test": "jest",
     "lint": "eslint --format codeframe --ext js,jsx,ts,tsx."
   },
