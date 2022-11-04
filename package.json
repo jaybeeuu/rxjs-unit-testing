@@ -1,21 +1,35 @@
 {
   "name": "rxjs-unit-testing",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.0",
+  "description": "An exploration of unit testing RXJS with Jest.",
+  "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon index.ts",
+    "test": "jest",
+    "lint": "eslint --format codeframe --ext js,jsx,ts,tsx."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "unit testing",
+    "experimental",
+    "rxjs",
+    "jest"
+  ],
+  "author": "Josh Bickley-Wallace <jbickley-wallace@scottlogic.com>",
+  "license": "MIT",
   "dependencies": {
     "rxjs": "^7.5.7"
   },
   "devDependencies": {
+    "@jaybeeuu/eslint-config": "^0.0.1",
+    "@tsconfig/node18-strictest-esm": "^1.0.1",
+    "@types/jest": "^29.2.1",
+    "@types/node": "^18.11.9",
+    "eslint": "^8.26.0",
+    "eslint-formatter-codeframe": "^7.32.1",
     "jest": "^29.2.2",
     "nodemon": "^2.0.20",
     "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
   }
 }
