@@ -1,0 +1,12 @@
+{
+  "extends": ["@jaybeeuu/eslint-config/base", "@jaybeeuu/eslint-config/jest"],
+  "rules": {
+    "jest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expectObservable"],
+        "additionalTestBlockFunctions": []
+      }
+    ]
+  }
+}
