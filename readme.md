@@ -19,5 +19,6 @@ RXJS provides some tools.
 ## References
 
 * [marble-testing](https://rxjs.dev/guide/testing/marble-testing)
+* [alphabet invasion](https://www.learnrxjs.io/learn-rxjs/recipes/alphabet-invasion-game)
+* [alphabet invasion stackblitz](https://stackblitz.com/edit/rxjs-alphabet-invasion?file=index.ts)
 *
-
