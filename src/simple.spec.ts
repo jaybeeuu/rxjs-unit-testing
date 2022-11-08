@@ -1,12 +1,12 @@
 import { combineLatest, delay } from "rxjs";
-import { TestScheduler } from 'rxjs/testing';
+import { TestScheduler } from "rxjs/testing";
 import { spread } from "./simple";
 
-const makeScheduler = () => new TestScheduler((actual, expected) => {
+const makeScheduler = (): TestScheduler => new TestScheduler((actual, expected) => {
   expect(actual).toStrictEqual(expected);
 });
 
-describe('delay', () => {
+describe("delay", () => {
   it("delays each emission by the same amount.", () => {
     makeScheduler().run(({ cold, expectObservable }) => {
       const source = cold("1 10ms 2 10ms 3");
@@ -18,7 +18,7 @@ describe('delay', () => {
   });
 });
 
-describe('spread', () => {
+describe("spread", () => {
   it("adds a delay between each emission.", () => {
     makeScheduler().run(({ cold, expectObservable }) => {
       const source = cold("1 2 3|");
@@ -30,7 +30,7 @@ describe('spread', () => {
   });
 });
 
-describe('combineLatest', () => {
+describe("combineLatest", () => {
   it("combines the latest value from each of the sources, in to an array.", () => {
     makeScheduler().run(({ cold, expectObservable }) => {
       const sourceOne = cold("1-2-3");
@@ -40,12 +40,12 @@ describe('combineLatest', () => {
         b: ["2", "4"],
         c: ["2", "5"],
         d: ["3", "5"],
-        e: ["3", "6"],
+        e: ["3", "6"]
       }] as const;
       expectObservable(combineLatest([
-          sourceOne,
-          sourceTwo
-        ])
+        sourceOne,
+        sourceTwo
+      ])
       ).toBe(...expected);
     });
   });
@@ -61,12 +61,12 @@ describe("realistic", () => {
         b: ["2", "4"],
         c: ["2", "5"],
         d: ["3", "5"],
-        e: ["3", "6"],
+        e: ["3", "6"]
       }] as const;
       expectObservable(combineLatest([
-          sourceOne,
-          sourceTwo
-        ])
+        sourceOne,
+        sourceTwo
+      ])
       ).toBe(...expected);
     });
   });
