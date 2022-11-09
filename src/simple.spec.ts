@@ -1,10 +1,6 @@
 import { combineLatest, delay } from "rxjs";
-import { TestScheduler } from "rxjs/testing";
 import { spread } from "./simple";
-
-const makeScheduler = (): TestScheduler => new TestScheduler((actual, expected) => {
-  expect(actual).toStrictEqual(expected);
-});
+import { makeScheduler } from "./test";
 
 describe("delay", () => {
   it("delays each emission by the same amount.", () => {
