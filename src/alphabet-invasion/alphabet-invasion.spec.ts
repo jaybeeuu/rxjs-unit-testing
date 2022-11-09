@@ -1,8 +1,9 @@
-import { interval } from "rxjs";
+import { interval, startWith } from "rxjs";
 import type RxjsModule from "rxjs";
 import type { GameOptions} from "./alphabet-invasion";
 import { makeGame$ } from "./alphabet-invasion";
 import { makeScheduler } from "../test";
+import { randomLetter, randomInt } from "./random";
 
 jest.mock("rxjs", () => {
   const actual = jest.requireActual<typeof RxjsModule>("rxjs");
@@ -12,6 +13,8 @@ jest.mock("rxjs", () => {
     interval: jest.fn()
   };
 });
+
+jest.mock("./random");
 
 const makeGameOptions = (gameOptions: Partial<GameOptions> = {}): GameOptions => {
   return {
@@ -23,8 +26,20 @@ const makeGameOptions = (gameOptions: Partial<GameOptions> = {}): GameOptions =>
   };
 };
 
+const setupRandomLetters = (...sequence: string[]): void => {
+  sequence.forEach((letter) => {
+    jest.mocked(randomLetter).mockReturnValueOnce(letter);
+  });
+};
+
+const setupRandomInts = (...sequence: number[]): void => {
+  sequence.forEach((number) => {
+    jest.mocked(randomInt).mockReturnValueOnce(number);
+  });
+};
+
 describe("makeGame", () => {
-  it("returns an observable", () => {
+  it("returns a series of game states with the letters shift into the top.", () => {
     makeScheduler().run(({
       cold,
       expectObservable
@@ -33,12 +48,113 @@ describe("makeGame", () => {
         (delay = 0) => cold(`${delay}ms 1 ${delay}ms 2 ${delay}ms 3`)
       );
 
-      expectObservable(makeGame$(makeGameOptions(), cold(""))).toBe(
+      setupRandomLetters("a", "b", "c");
+      setupRandomInts(1, 2, 3);
+
+      expectObservable(makeGame$(
+        makeGameOptions(),
+        cold("").pipe(startWith(""))
+      )).toBe(
         "600ms a 600ms b 600ms c",
         {
-          a: { letters: [], score: 0, level: 1 },
-          b: { letters: [], score: 0, level: 1 },
-          c: { letters: [], score: 0, level: 1 }
+          a: { letters: [
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 },
+          b: { letters: [
+            { letter: "b", yPos: 2 },
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 },
+          c: { letters: [
+            { letter: "c", yPos: 3 },
+            { letter: "b", yPos: 2 },
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 }
+        }
+      );
+    });
+  });
+
+  it("doesn't remove letters if the wrong key is pressed.", () => {
+    makeScheduler().run(({
+      cold,
+      expectObservable
+    }) => {
+      jest.mocked(interval).mockImplementation(
+        (delay = 0) => cold(`${delay}ms 1`)
+      );
+
+      setupRandomLetters("a");
+      setupRandomInts(1);
+      const key$ = cold("800ms b");
+
+      expectObservable(makeGame$(
+        makeGameOptions(),
+        key$
+      )).toBe(
+        "600ms a 199ms a",
+        {
+          a: { letters: [
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 }
+        }
+      );
+    });
+  });
+
+  it("remove the last letter if the matching key is pressed.", () => {
+    makeScheduler().run(({
+      cold,
+      expectObservable
+    }) => {
+      jest.mocked(interval).mockImplementation(
+        (delay = 0) => cold(`${delay}ms 1`)
+      );
+
+      setupRandomLetters("a");
+      setupRandomInts(1);
+      const key$ = cold("800ms a");
+
+      expectObservable(makeGame$(
+        makeGameOptions(),
+        key$
+      )).toBe(
+        "600ms a 199ms b",
+        {
+          a: { letters: [
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 },
+          b: { letters: [], score: 1, level: 1 }
+        }
+      );
+    });
+  });
+
+  it("does not remove the letter of the key if it is not the last.", () => {
+    makeScheduler().run(({
+      cold,
+      expectObservable
+    }) => {
+      jest.mocked(interval).mockImplementation(
+        (delay = 0) => cold(`${delay}ms 1 ${delay}ms 1`)
+      );
+
+      setupRandomLetters("a", "b");
+      setupRandomInts(1, 2);
+      const key$ = cold("1300ms b");
+
+      expectObservable(makeGame$(
+        makeGameOptions(),
+        key$
+      )).toBe(
+        "600ms a 600ms b 98ms b",
+        {
+          a: { letters: [
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 },
+          b: { letters: [
+            { letter: "b", yPos: 2 },
+            { letter: "a", yPos: 1 }
+          ], score: 0, level: 1 }
         }
       );
     });
