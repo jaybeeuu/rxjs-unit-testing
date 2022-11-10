@@ -1,8 +1,14 @@
-import { interval, startWith } from "rxjs";
+/**
+ * @jest-environment jsdom
+ */
+
+import type { NextNotification, Observable } from "rxjs";
 import type RxjsModule from "rxjs";
+import { fromEvent, interval } from "rxjs";
+import { TestScheduler } from "rxjs/testing";
+import { makeScheduler } from "../test";
 import type { GameOptions} from "./alphabet-invasion";
 import { makeGame$ } from "./alphabet-invasion";
-import { makeScheduler } from "../test";
 import { randomLetter, randomInt } from "./random";
 
 jest.mock("rxjs", () => {
@@ -38,6 +44,21 @@ const setupRandomInts = (...sequence: number[]): void => {
   });
 };
 
+const setupKeyStrokes = (
+  cold: (
+    marbles: string,
+    values: { [marble: string]: KeyboardEvent }
+  ) => Observable<KeyboardEvent>,
+  marbles: string
+): void => {
+  const events = Object.fromEntries(TestScheduler.parseMarbles(marbles)
+    .map((message) => message.notification)
+    .filter((notification): notification is NextNotification<string>  => notification.kind === "N")
+    .map(({ value: key }) => [key, new KeyboardEvent("keydown", { key })])
+  );
+  jest.mocked(fromEvent).mockReturnValue(cold(marbles, events));
+};
+
 describe("makeGame", () => {
   it("returns a series of game states with the letters shift into the top.", () => {
     makeScheduler().run(({
@@ -50,10 +71,10 @@ describe("makeGame", () => {
 
       setupRandomLetters("a", "b", "c");
       setupRandomInts(1, 2, 3);
+      setupKeyStrokes(cold, "");
 
       expectObservable(makeGame$(
         makeGameOptions(),
-        cold("").pipe(startWith(""))
       )).toBe(
         "600ms a 600ms b 600ms c",
         {
@@ -85,11 +106,10 @@ describe("makeGame", () => {
 
       setupRandomLetters("a");
       setupRandomInts(1);
-      const key$ = cold("800ms b");
+      setupKeyStrokes(cold, "800ms b");
 
       expectObservable(makeGame$(
-        makeGameOptions(),
-        key$
+        makeGameOptions()
       )).toBe(
         "600ms a 199ms a",
         {
@@ -112,11 +132,10 @@ describe("makeGame", () => {
 
       setupRandomLetters("a");
       setupRandomInts(1);
-      const key$ = cold("800ms a");
+      setupKeyStrokes(cold, "800ms a");
 
       expectObservable(makeGame$(
-        makeGameOptions(),
-        key$
+        makeGameOptions()
       )).toBe(
         "600ms a 199ms b",
         {
@@ -140,11 +159,10 @@ describe("makeGame", () => {
 
       setupRandomLetters("a", "b");
       setupRandomInts(1, 2);
-      const key$ = cold("1300ms b");
+      setupKeyStrokes(cold, "1300ms b");
 
       expectObservable(makeGame$(
-        makeGameOptions(),
-        key$
+        makeGameOptions()
       )).toBe(
         "600ms a 600ms b 98ms b",
         {

@@ -7,10 +7,12 @@ export interface Letter {
   letter: string;
   yPos: number;
 }
+
 export interface Letters {
   letters: Letter[];
   interval: number;
 }
+
 export interface State {
   score: number;
   letters: Letter[];
@@ -24,19 +26,13 @@ export interface GameOptions {
   gameWidth: number;
 }
 
-const getDocumentKey$ = (): Observable<string> => fromEvent<KeyboardEvent>(
-  document,
-  "keydown"
-).pipe(map((e: { key: string }) => e.key));
-
 export const makeGame$ = (
   {
     levelChangeThreshold,
     speedAdjust,
     endThreshold,
     gameWidth
-  }: GameOptions,
-  key$: Observable<string> = getDocumentKey$()
+  }: GameOptions
 ): Observable<State> => {
   const intervalSubject = new BehaviorSubject(600);
 
@@ -52,7 +48,15 @@ export const makeGame$ = (
         }), { letters: [], interval: 0 })
       )));
 
-  return combineLatest([key$.pipe(startWith("")), letterState$]).pipe(
+  const key$ = fromEvent<KeyboardEvent>(
+    document,
+    "keydown"
+  ).pipe(
+    map((e: { key: string }) => e.key),
+    startWith("")
+  );
+
+  return combineLatest([key$, letterState$]).pipe(
     scan<[string, Letters], State>(
       (oldState, [key, letterState]) => {
         const newState = { ...oldState, letters: [...letterState.letters] };
