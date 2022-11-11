@@ -1,24 +1,27 @@
-# RXJS Unit Testing
+# RxJS Unit Testing
 
-I don't like RXJS.
-I think its opaque, and requires a lot of understanding the magic and pouring through the docs.
-Beware the uinitiated.
-One of my least favorite things about it is that even the advocates think it's hard to unit test.
+This repo is the result of my exploration into unit testing [RxJS](https://rxjs.dev/).
+In particular I wanted to get to know the
+[marble diagram testing tools](https://rxjs.dev/guide/testing/marble-testing)
+and apply them to a relatively complex scenario to see how they stand up.
 
-I am obliged to work with it on my current project, so maybe i'll change my opinion. but not if i can't unit test it.
+I used the [alphabet-invasion-game](https://www.learnrxjs.io/learn-rxjs/recipes/alphabet-invasion-game) (props to [adamlubek](https://github.com/adamlubek)) as my more complex case.
 
-So how do we do that?
+You can find my write up on the Scott logic blog.
 
-## The tools
+## Getting started here
 
-RXJS provides some tools.
+I use [pnpm](https://pnpm.io/) (latest at the time of writing was v7.14.2) to manage my dependencies and of course you will need [node](https://nodejs.org/en/) (I used v18.14.0).
 
-* TestScheduler
-* Marble diagrams
+```sh
+# Install dependencies
+pnpm install
 
-## References
+# Run the tests
+pnpm test
 
-* [marble-testing](https://rxjs.dev/guide/testing/marble-testing)
-* [alphabet invasion](https://www.learnrxjs.io/learn-rxjs/recipes/alphabet-invasion-game)
-* [alphabet invasion stackblitz](https://stackblitz.com/edit/rxjs-alphabet-invasion?file=index.ts)
-*
+# Start the vite dev server to see alphabet invasion running on http://localhost:5173/
+pnpm start
+```
+
+That's it.

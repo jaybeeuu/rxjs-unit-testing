@@ -4,8 +4,12 @@
   "description": "An exploration of unit testing RXJS with Jest.",
   "main": "./lib/index.js",
   "type": "module",
+  "engines": {
+    "pnpm": "^7.14.2",
+    "node": "^18.12.0"
+  },
   "scripts": {
-    "start": "vite ",
+    "start": "vite",
     "build": "tsc --project ./tsconfig.build.json && vite build",
     "test": "jest",
     "lint": "eslint --format codeframe --ext js,jsx,ts,tsx."

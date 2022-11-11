@@ -3,10 +3,10 @@ import { spread } from "./simple";
 import { makeScheduler } from "./test";
 
 describe("delay", () => {
-  it("delays each emission by the same amount.", () => {
+  it("delays each emission.", () => {
     makeScheduler().run(({ cold, expectObservable }) => {
-      const source = cold("1 10ms 2 10ms 3");
-      const expected = "   300ms 1 10ms 2 10ms 3";
+      const source = cold("1-2-3|");
+      const expected = "   300ms 1-2-(3|)";
       expectObservable(source.pipe(
         delay(300)
       )).toBe(expected);
@@ -48,7 +48,7 @@ describe("combineLatest", () => {
 });
 
 describe("realistic", () => {
-  it("adds a delay between each emission.", () => {
+it("adds a delay between each emission.", () => {
     makeScheduler().run(({ cold, expectObservable }) => {
       const sourceOne = cold("1-2-3");
       const sourceTwo = cold("-4-5-6");

@@ -41,10 +41,13 @@ export const makeGame$ = (
       .pipe(
         scan<number, Letters>((letters) => ({
           interval: i,
-          letters: [({
-            letter: randomLetter(),
-            yPos: randomInt({ max: gameWidth })
-          }), ...letters.letters]
+          letters: [
+            {
+              letter: randomLetter(),
+              yPos: randomInt({ max: gameWidth })
+            },
+            ...letters.letters
+        ]
         }), { letters: [], interval: 0 })
       )));
 
@@ -59,12 +62,12 @@ export const makeGame$ = (
   return combineLatest([key$, letterState$]).pipe(
     scan<[string, Letters], State>(
       (oldState, [key, letterState]) => {
-        const newState = { ...oldState, letters: [...letterState.letters] };
+        const newState = { ...oldState };
 
         const { letter: targetLetter } = letterState.letters.at(-1) ?? {};
         if (targetLetter && targetLetter === key) {
           newState.score = newState.score + 1;
-          newState.letters.pop();
+          letterState.letters.pop();
         }
 
         if (newState.score > 0 && newState.score % levelChangeThreshold === 0) {
@@ -74,7 +77,7 @@ export const makeGame$ = (
           intervalSubject.next(letterState.interval - speedAdjust);
         }
 
-        return newState;
+        return { ...newState, letters: [...letterState.letters] };
       },
       { score: 0, letters: [], level: 1 }),
     takeWhile(state => state.letters.length < endThreshold),
