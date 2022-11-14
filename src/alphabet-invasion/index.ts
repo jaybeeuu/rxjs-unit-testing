@@ -13,7 +13,7 @@ const renderGame = (state: State): void => {
     `Score: ${state.score}, Level: ${state.level}`,
     "-".repeat(gameOptions.gameWidth),
     ...state.letters.map(
-      (l) => `${"&nbsp".repeat(l.yPos)}${l.letter}`
+      (l) => `${"&nbsp".repeat(l.xPos)}${l.letter}`
     ),
     ...Array.from({
       length: gameOptions.endThreshold - state.letters.length - 1

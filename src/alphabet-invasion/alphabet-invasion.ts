@@ -5,10 +5,10 @@ import { randomInt, randomLetter } from "./random";
 
 export interface Letter {
   letter: string;
-  yPos: number;
+  xPos: number;
 }
 
-export interface Letters {
+interface Letters {
   letters: Letter[];
   interval: number;
 }
@@ -44,10 +44,10 @@ export const makeGame$ = (
           letters: [
             {
               letter: randomLetter(),
-              yPos: randomInt({ max: gameWidth })
+              xPos: randomInt({ max: gameWidth })
             },
             ...letters.letters
-        ]
+          ]
         }), { letters: [], interval: 0 })
       )));
 

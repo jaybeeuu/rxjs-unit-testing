@@ -14,6 +14,7 @@ I thought I'd tackle the unit testing problems first,
 since I find unit tests to be a great way to explore and learn the features of a library like this
 and in this post I'll introduce the basic toolsets included in the main project.
 But to properly explore it, I also also wanted to see how those same tools fair when they encounter more realistic cases than are found in the documentation.
+
 Without giving too much away, I was pleasantly surprised.
 
 ## Housekeeping
@@ -156,92 +157,127 @@ I used the
 props to [adamlubek](https://github.com/adamlubek)
 ) as the base for my more complex case.
 
-This is a simple game.
-Letters march down the screen, press the key of the lowest letter to make it disappear and score a point.
-The game ends when a letter reaches the bottom.
-Every 20 points increases the rate at which the letters march.
-
+It's a space invaders style game, with letters marching down from the top of the screen.
+To clear them, you type the letter on the lowest row.
 Here's a gif of my embarrassingly bad touch typing:
 
 ![alphabet invasion](./alphabet-invasion.gif)
 
-With, purposefully, only a few minor refactors, to get it into a unit testable state
+I've refactored it a bit to make it unit testable
 and to avoid some of the more obscure syntax the author favored (TIL - the
 [comma operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Comma_Operator)
 )
-.
-You can see the full listings of my refactor on [github](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.ts).
-But it's made up of 3 basic components.
+but I've only done so minimally.
+Part of the point of this exercise is to discover if the tools are flexible enough that we can use them to build tests for legacy code.
+Also... I don't want to break the game!
+Getting the thing under test before I make more dramatic refactors is much safer.
 
-First up the letters:
+You can see the full listings of my refactor on
+[github](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.ts),
+but I'm not going to describe the implementation here.
+This post is already long enough.
+Instead I'd like to show you the interfaces, and describe the behaviour we're testing - that's really all we need for this purpose.
+
+Here they are:
 
 ```ts
 export interface Letter {
   letter: string;
-  yPos: number;
+  xPos: number;
 }
 
-export interface Letters {
+export interface State {
+  score: number;
   letters: Letter[];
-  interval: number;
+  level: number;
 }
 
-const intervalSubject = new BehaviorSubject(600);
+export interface GameOptions {
+  levelChangeThreshold: number;
+  speedAdjust: number;
+  endThreshold: number;
+  gameWidth: number;
+}
 
-const letterState$ = intervalSubject.pipe(
-  switchMap((i) => interval(i)
-    .pipe(
-      scan<number, Letters>((letters) => ({
-        interval: i,
-        letters: [
-          {
-            letter: randomLetter(),
-            yPos: randomInt({ max: gameWidth })
-          },
-          ...letters.letters
-        ]
-      }), { letters: [], interval: 0 })
-    )));
+export const makeGame$ = (
+  options: GameOptions
+): Observable<State>;
 ```
 
-Here we're defining the state of the letters in the game field; here's the highlights...
+`makeGame$` is what we will test.
+This is the function which creates the observable of game state.
+We'll be testing how the `State` changes over time, as a result of our input streams.
+Here's how the state should evolve:
 
-* `intervalSubject` - defines the number of milliseconds between letters being added. It's a
-[`BehaviourSubject`](https://rxjs.dev/api/index/class/BehaviorSubject)
-so that when we change level we can `next` in a new delay.
-* `letterState` - ses
-[`switchMap`](https://rxjs.dev/api/operators/switchMap)
-and
-[`scan`](https://rxjs.dev/api/operators/scan)
-to make an observable list of letters which adds a new, random, letter (definitions of
-[`randomLetter`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/random.ts#L8')
-and
-[`randomInt`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/random.ts#L1')
-if you are curious) every `n` milliseconds, where `n` is the number last emitted from the `intervalSubject`,
+* Every 600ms the game inserts a letter at the top of the game field, pushing the other letters down.
+  * The letter is randomly positioned withing it's row.
+* When the player types a key, f it matches the letter lowest in the field,
+  * that letter is removed.
+  * the player gains a point
+* When the players points are a multiple of `levelChangeThreshold`
+  * the player gains a point
+  * the level increases by one
+  * the interval decreases by `speedAdjust`
+  * the player gains a point
+* If there are `endThreshold` letters in the game, the game ends.
 
-The next bit
+Along the way the implementation makes use of a host of operators, which we don''t need to worry about for the test, but there's also some hidden dependencies.
+(I really did only minimally refactor this to separate out the render logic from the state logic.)
+They are:
+
+* [`fromEvent`](https://rxjs.dev/api/index/function/fromEvent) - Creates an observable of events.
+This is how the game listens to keystrokes.
+* [`interval`](https://rxjs.dev/api/index/function/interval) - Makes an observable which emits at the defined intervals. This is used for the game clock.
+* [`randomInt`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/random.ts#L13) - Generates a random integer between two values.
+* [`randomLetter`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/random.ts#L23) - Generates a random lowercase letter.
+
+To test the game engine we'll need to control the events emitted by `fromEvent` and `interval`,
+and to make them deterministic we'll mock the output from `randomInt` and `randomLetter`.
+
+Lol. having described it like that it seems like this complex case is going to be simple after all....
 
 ```ts
-const key$ = fromEvent<KeyboardEvent>(
-  document,
-  "keydown"
-).pipe(
-  map((e: { key: string }) => e.key),
-  startWith("")
-);
+it("remove the last letter when the matching key is pressed.", () => {
+  makeScheduler().run(({
+    cold,
+    expectObservable
+  }) => {
+    jest.mocked(interval).mockImplementation(
+      (delay) => cold(`${delay}ms 1`)
+    );
+    setupRandomLetters("a");
+    setupRandomInts(1);
+
+    jest.mocked(fromEvent).mockReturnValue(
+      cold("800ms a", { a: new KeyboardEvent("keydown", { key: "a" }) })
+    );
+
+    expectObservable(makeGame$(
+      makeGameOptions()
+    )).toBe(
+      "600ms a 199ms b",
+      {
+        a: { letters: [
+          { letter: "a", xPos: 1 }
+        ], score: 0, level: 1 },
+        b: { letters: [], score: 1, level: 1 }
+      }
+    );
+  });
+});
 ```
 
-Uses
-[`fromEvent`](https://rxjs.dev/api/index/function/fromEvent)
-to subscribe to the document's `keydown` event and
-[map](https://rxjs.dev/api/operators/map)
-s because we're only interested in which character the key pressed represents.
-We [startWith](https://rxjs.dev/api/index/function/startWith) so that we get an emission as soon as we subscribe, rater than waiting for the first keystroke.
+Yeah, that wasn't too bad. First we get into the context of the test scheduler, with a call to `run`. the next 4 statements are setup code.
 
-Finallly
+We're mocking `interval`, when it gets called we'll return a cold observable which emits with a delay according to the delay passed in.
+This is a bit awkward, but hopefully its clear why - the code wasn't written with testing in  mind so it has control of the delay
+(feels like a good place to refactor once we have the code under test)
+.
 
-## References
+The next two calls,
+[`setupRandomLetters`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.spec.ts#L35)
+and
+[`setupRandomInts`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.spec.ts#L35)
+are simple mocks, I've linked their implementations in case you are curious, but I don't think they are interesting to our discussion here.
 
-* [marble-testing](https://rxjs.dev/guide/testing/marble-testing)
-* [alphabet invasion](https://www.learnrxjs.io/learn-rxjs/recipes/alphabet-invasion-game)
-* [alphabet invasion stackblitz](https://stackblitz.com/edit/rxjs-alphabet-invasion?file=index.ts)
+The next mock - `jest.mock(fromEvent)` defines

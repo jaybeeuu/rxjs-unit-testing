@@ -44,19 +44,28 @@ const setupRandomInts = (...sequence: number[]): void => {
   });
 };
 
-const setupKeyStrokes = (
-  cold: (
-    marbles: string,
-    values: { [marble: string]: KeyboardEvent }
-  ) => Observable<KeyboardEvent>,
-  marbles: string
-): void => {
+type Cold = <T = string>(marbles: string, values?: {
+  [marble: string]: T;
+} | undefined, error?: any) => Observable<T>;
+
+const setupKeyStrokes = (cold: Cold, marbles: string): void => {
   const events = Object.fromEntries(TestScheduler.parseMarbles(marbles)
     .map((message) => message.notification)
-    .filter((notification): notification is NextNotification<string>  => notification.kind === "N")
+    .filter((notification): notification is NextNotification<string> => notification.kind === "N")
     .map(({ value: key }) => [key, new KeyboardEvent("keydown", { key })])
   );
   jest.mocked(fromEvent).mockReturnValue(cold(marbles, events));
+};
+
+const setupInterval = (cold: Cold, emissions: number): void => {
+  jest.mocked(interval).mockImplementation(
+    (delay = 0) => cold(
+      Array.from(
+        { length: emissions },
+        (_, index) => `${delay}ms ${index}`
+      ).join(" ")
+    )
+  );
 };
 
 describe("makeGame", () => {
@@ -65,13 +74,10 @@ describe("makeGame", () => {
       cold,
       expectObservable
     }) => {
-      jest.mocked(interval).mockImplementation(
-        (delay = 0) => cold(`${delay}ms 1 ${delay}ms 2 ${delay}ms 3`)
-      );
-
       setupRandomLetters("a", "b", "c");
       setupRandomInts(1, 2, 3);
       setupKeyStrokes(cold, "");
+      setupInterval(cold, 3);
 
       expectObservable(makeGame$(
         makeGameOptions(),
@@ -79,16 +85,16 @@ describe("makeGame", () => {
         "600ms a 600ms b 600ms c",
         {
           a: { letters: [
-            { letter: "a", yPos: 1 }
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 },
           b: { letters: [
-            { letter: "b", yPos: 2 },
-            { letter: "a", yPos: 1 }
+            { letter: "b", xPos: 2 },
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 },
           c: { letters: [
-            { letter: "c", yPos: 3 },
-            { letter: "b", yPos: 2 },
-            { letter: "a", yPos: 1 }
+            { letter: "c", xPos: 3 },
+            { letter: "b", xPos: 2 },
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 }
         }
       );
@@ -100,12 +106,9 @@ describe("makeGame", () => {
       cold,
       expectObservable
     }) => {
-      jest.mocked(interval).mockImplementation(
-        (delay = 0) => cold(`${delay}ms 1`)
-      );
-
       setupRandomLetters("a");
       setupRandomInts(1);
+      setupInterval(cold, 1);
       setupKeyStrokes(cold, "800ms b");
 
       expectObservable(makeGame$(
@@ -114,7 +117,7 @@ describe("makeGame", () => {
         "600ms a 199ms a",
         {
           a: { letters: [
-            { letter: "a", yPos: 1 }
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 }
         }
       );
@@ -126,10 +129,7 @@ describe("makeGame", () => {
       cold,
       expectObservable
     }) => {
-      jest.mocked(interval).mockImplementation(
-        (delay = 0) => cold(`${delay}ms 1`)
-      );
-
+      setupInterval(cold, 1);
       setupRandomLetters("a");
       setupRandomInts(1);
       setupKeyStrokes(cold, "800ms a");
@@ -140,7 +140,7 @@ describe("makeGame", () => {
         "600ms a 199ms b",
         {
           a: { letters: [
-            { letter: "a", yPos: 1 }
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 },
           b: { letters: [], score: 1, level: 1 }
         }
@@ -153,10 +153,7 @@ describe("makeGame", () => {
       cold,
       expectObservable
     }) => {
-      jest.mocked(interval).mockImplementation(
-        (delay = 0) => cold(`${delay}ms 1 ${delay}ms 1`)
-      );
-
+      setupInterval(cold, 2);
       setupRandomLetters("a", "b");
       setupRandomInts(1, 2);
       setupKeyStrokes(cold, "1300ms b");
@@ -167,11 +164,11 @@ describe("makeGame", () => {
         "600ms a 600ms b 98ms b",
         {
           a: { letters: [
-            { letter: "a", yPos: 1 }
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 },
           b: { letters: [
-            { letter: "b", yPos: 2 },
-            { letter: "a", yPos: 1 }
+            { letter: "b", xPos: 2 },
+            { letter: "a", xPos: 1 }
           ], score: 0, level: 1 }
         }
       );
