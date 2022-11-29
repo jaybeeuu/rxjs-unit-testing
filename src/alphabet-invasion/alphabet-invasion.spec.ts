@@ -137,7 +137,7 @@ describe("makeGame", () => {
       expectObservable(makeGame$(
         makeGameOptions()
       )).toBe(
-        "600ms a 199ms b",
+        "601ms a 199ms b",
         {
           a: { letters: [
             { letter: "a", xPos: 1 }

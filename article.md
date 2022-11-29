@@ -7,19 +7,20 @@ How can any library which with an API surface so large that it needs a
 [decision tree](https://rxjs.dev/operator-decision-tree) be anything but?
 In particular the unit testing story of RxJS concerned me; even some advocates tell me it's hard to do.
 
-Given that it has a strong base of support, though, and that I see it more and more often on both the front and back end of project,
-I wondered if, by dipping my toe in the water, I might change my mind?
+Given that it has a strong base of support, though, and that I see it more and more often on both the front and back end of projects,
+I wondered if, by di.ping my toe in the water, I might change my mind?
 
-I thought I'd tackle the unit testing problems first,
-since I find unit tests to be a great way to explore and learn the features of a library like this
-and in this post I'll introduce the basic toolsets included in the main project.
-But to properly explore it, I also also wanted to see how those same tools fair when they encounter more realistic cases than are found in the documentation.
+I thought I'd tackle unit testing first,
+I find unit tests to be a great way to explore and learn the features of a library
+and in this post I'll introduce the basic toolsets included in the main package.
+I also wanted to see how those same tools fair when they encounter more realistic, complex, cases than are found in the documentation,
+so we'll take it a step further and test something more gnarly.
 
 Without giving too much away, I was pleasantly surprised.
 
 ## Housekeeping
 
-There's loads of great content out there introducing RxJS, so i'm not going to reinvent the wheel here.
+There's loads of great content out there introducing RxJS, so I'm not going to reinvent the wheel here.
 Instead I recommend that if you're new to Reactive programming or RxJS head on over to their
 [getting started page](https://rxjs.dev/guide/overview)
 where you'll get a good overview.
@@ -34,27 +35,40 @@ If you would like to see the full listings from my investigation then you can fi
 
 ## The tools
 
-I want to stay lightish on this. It's a big topic and the interesting thing will be seeing this applied to a more complex case, but I do also want to introduce the main topics for RX testing. So bear with me.
+I want to stay lightish on this.
+It's a big topic and the interesting thing will be seeing this applied to a more complex case, but I do also want to introduce the main topics for RX testing.
+So bear with me.
 
-The first topic to cover is the [`TestScheduler`](https://rxjs.dev/api/testing/TestScheduler).
+The first topic to cover is the
+[`TestScheduler`](https://rxjs.dev/api/testing/TestScheduler)
+.
 
-RxJS, at it's heartm is a way to interact with and respond (or... if you will..._react_) to asynchronous events.
+RxJS, at it's heart is a way to interact with and respond (or... if you will..._react_) to asynchronous events.
 From a unit testing stand point that's a problem.
 Asynchrony often means time delays, which means slow tests.
-But it's also hard to document and visualise sequences of events in code, in a way that remains terse and expressive.
+But it's also hard to document and visualise sequences of events in code,
+in a way that remains terse and expressive.
 Enter the `TestScheduler`.
 
-Rx operators take a [`SchedulerLike`](https://rxjs.dev/api/index/interface/SchedulerLike) argument which they will use to schedule their emissions and tasks.
-Usually, by default they use the [`asyncScheduler`](https://rxjs.dev/api/index/const/asyncScheduler`) which puts an operators tasks on the event loop, so they happen asynchronously.
-The `TestScheduler` by contrast runs tasks synchronously, and in a similar manner to jest's [Timer Mocks](https://jestjs.io/docs/timer-mocks), in "virtual time".
+Rx operators take a
+[`SchedulerLike`](https://rxjs.dev/api/index/interface/SchedulerLike)
+argument which they will use to schedule their emissions and tasks.
+Usually, by default they use the
+[`asyncScheduler`](https://rxjs.dev/api/index/const/asyncScheduler`)
+which puts an operators tasks on the event loop, so they happen asynchronously.
+The `TestScheduler` by contrast runs tasks synchronously, and in a similar manner to jest's [Timer Mocks](https://jestjs.io/docs/timer-mocks)
+, in "virtual time".
 
-The virtual time bit of that is important to understand. Rather than using the systems clock and to schedule tasks the `TestScheduler` is maintaining an ordered list of tasks to run,
-with a "time frame" associated with each one. Hopefully this will become clearer later...
+The virtual time bit of that is important to understand.
+Rather than using the systems clock and to schedule tasks the `TestScheduler` is maintaining an ordered list of tasks to run,
+with a "time frame" associated with each one.
+Hopefully this will become clearer later...
 
 For now, let's look at how to use one.
 First we new it up, passing in a function we want it to use to make equality assertions.
-This let's us customise it per test framework.
-I'm going to package that up in a function so i don't have to repeat it for every test I write:
+This let's us customise it per test framework,
+passing a function it will use to make assertions.
+I'm going to package that up in a function so I don't have to repeat it for every test:
 
 ```ts
 import { TestScheduler } from "rxjs/testing";
@@ -64,7 +78,10 @@ export const makeScheduler = (): TestScheduler => new TestScheduler((actual, exp
 });
 ```
 
-The main method we're going to be interested on in the `TestScheduler` instance is [`run`](https://rxjs.dev/api/testing/TestScheduler#run). That is where the body of our test will be, and gives us some tools for building the tests.
+The main method we're going to be interested on in the `TestScheduler` instance is
+[`run`](https://rxjs.dev/api/testing/TestScheduler#run)
+.
+That is where the body of our test will be, and gives us some tools for building the tests.
 
 ## The Simple Case
 
@@ -84,9 +101,11 @@ describe("delay", () => {
 });
 ```
 
-So skipping the Jest `describe` and `it`, line 3 makes the scheduler (using the function I showed before), the calls `run`.
-The callback I'm passing in contains the body of the test, and you can see that i'm destructuring some properties from the
-[RunHelpers](https://rxjs.dev/api/testing/RunHelpers#runhelpers)
+So skipping the Jest `describe` and `it`,
+line 3 makes the scheduler (using the function I showed before), then calls `run`.
+The callback I'm passing into `run` contains the body of the test,
+and you can see that I'm destructuring some properties from the
+[`RunHelpers`](https://rxjs.dev/api/testing/RunHelpers#runhelpers)
 argument I'm passed.
 [`cold`](https://rxjs.dev/api/testing/TestScheduler#createcoldobservable)
 and
@@ -119,7 +138,7 @@ And is also used in the assertions.
 
 That's Line 5, we're defining what we expect to happen.
 
-1. `` - white space, which is ignored, to align the diagrams
+1. `` - white space (which is ignored) to align the diagrams
 2. `300ms` - Wait 300 milliseconds (In virtual time - Jest tells me this test only takes a few milliseconds to run).
 3. `1` - emit the string value `"1"`
 4. "-" - wait a frame
@@ -131,7 +150,7 @@ That's Line 5, we're defining what we expect to happen.
 Line 6 and we're done. I'm defining the pipeline I want to test. In this case, there's a single operator -
 [`delay`](https://rxjs.dev/api/operators/delay)
 .
-I've inlined that into my call to `expectObservable` and then called `.toBe` which takes my expected Marble diagram and performs the equality assertion on it.
+I've inlined that into my call to `expectObservable` and then called `.toBe`, which takes my expected Marble diagram, and performs the equality assertion that I passed as a callback into the `TestScheduler`.
 
 Easy.
 Too easy?
@@ -143,18 +162,19 @@ A bit of archeology indicates that it was added in what became
 [version 5](https://github.com/ReactiveX/rxjs/commit/b23daf14769d1efc2f27901fed27d334a465153d)
 .
 
-The syntax seems at first glance to be a bit limited, only allowing the emissions to be single character strings,
+The marble diagrams look a bit limited,
+only allowing the emissions to be single character strings,
 but the methods and functions accepting them also accept a second argument,
 letting you map to more complex objects... promising.
 
 ## Getting more complex
 
-To turn my head, I really need to take this for a test drive with a more complex case.
-Rather than write my own thing to unit test,
-I used the
+To test something more realistic... we first need something more realistic.
+I decided to use the
 [alphabet-invasion-game](https://www.learnrxjs.io/learn-rxjs/recipes/alphabet-invasion-game)
 (
-props to [adamlubek](https://github.com/adamlubek)
+props to
+[adamlubek](https://github.com/adamlubek)
 ) as the base for my more complex case.
 
 It's a space invaders style game, with letters marching down from the top of the screen.
@@ -172,11 +192,12 @@ Part of the point of this exercise is to discover if the tools are flexible enou
 Also... I don't want to break the game!
 Getting the thing under test before I make more dramatic refactors is much safer.
 
-You can see the full listings of my refactor on
-[github](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.ts),
-but I'm not going to describe the implementation here.
+I'm not going to describe the implementation here.
 This post is already long enough.
-Instead I'd like to show you the interfaces, and describe the behaviour we're testing - that's really all we need for this purpose.
+You can see the full listings of my refactor on
+[github](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.ts)
+if you are interested.
+Instead, I'd like to show you the interfaces, and describe the behaviour we're testing - that's really all we need for this purpose.
 
 Here they are:
 
@@ -211,17 +232,17 @@ Here's how the state should evolve:
 
 * Every 600ms the game inserts a letter at the top of the game field, pushing the other letters down.
   * The letter is randomly positioned withing it's row.
-* When the player types a key, f it matches the letter lowest in the field,
+* When the player types a key, if it matches the letter lowest in the field,
   * that letter is removed.
   * the player gains a point
-* When the players points are a multiple of `levelChangeThreshold`
+* When the player's points are a multiple of `levelChangeThreshold`
   * the player gains a point
   * the level increases by one
   * the interval decreases by `speedAdjust`
   * the player gains a point
 * If there are `endThreshold` letters in the game, the game ends.
 
-Along the way the implementation makes use of a host of operators, which we don''t need to worry about for the test, but there's also some hidden dependencies.
+Along the way the implementation makes use of a host of operators, which we don't need to worry about for the test, but there's also some hidden dependencies.
 (I really did only minimally refactor this to separate out the render logic from the state logic.)
 They are:
 
@@ -247,14 +268,11 @@ it("remove the last letter when the matching key is pressed.", () => {
     );
     setupRandomLetters("a");
     setupRandomInts(1);
-
     jest.mocked(fromEvent).mockReturnValue(
       cold("800ms a", { a: new KeyboardEvent("keydown", { key: "a" }) })
     );
 
-    expectObservable(makeGame$(
-      makeGameOptions()
-    )).toBe(
+    expectObservable(makeGame$(makeGameOptions())).toBe(
       "600ms a 199ms b",
       {
         a: { letters: [
@@ -270,7 +288,7 @@ it("remove the last letter when the matching key is pressed.", () => {
 Yeah, that wasn't too bad. First we get into the context of the test scheduler, with a call to `run`. the next 4 statements are setup code.
 
 We're mocking `interval`, when it gets called we'll return a cold observable which emits with a delay according to the delay passed in.
-This is a bit awkward, but hopefully its clear why - the code wasn't written with testing in  mind so it has control of the delay
+This is a bit awkward, but hopefully its clear why; the code wasn't written with testing in  mind so it has control of the delay
 (feels like a good place to refactor once we have the code under test)
 .
 
@@ -280,4 +298,55 @@ and
 [`setupRandomInts`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.spec.ts#L35)
 are simple mocks, I've linked their implementations in case you are curious, but I don't think they are interesting to our discussion here.
 
-The next mock - `jest.mock(fromEvent)` defines
+The only thing that's interesting is that the `randomLetter` function is going to return `a` when it is called.
+
+The next mock setup, `jest.mocked(fromEvent).mockReturnValue`, defines the keys the "player" "presses" during the test - 800ms in they press `a`.
+You can see in there the marble diagram only mentions the letter `a`, but we're passing the second argument to `cold` which tells it what `a` maps too - a `new KeyboardEvent`.
+It's the event that will be emitted on the stream not the letter.
+
+That's all the setup we need.
+
+Next, we make the observable, with the `makeGame$` call.
+(
+  [`makeGameOptions`](https://github.com/jaybeeuu/rxjs-unit-testing/blob/main/src/alphabet-invasion/alphabet-invasion.spec.ts#L25)
+  is a helper which ... makes the game options.
+  None of them have any bearing on this test case so using this to get the defaults helps keep the test code terse.
+)
+
+In the `toBe` assertion we set out our expectations.
+Roughly the marble diagram translates to:
+
+> After 600ms, emit state a, 200ms later emit state b
+
+Where, the states are present in the second argument to `toBe`.
+The first state has the letter `a` appear on the screen, that's from the interval ticking and calling `randomLetter`.
+Then the player hit's the `a` key and the letter is removed.
+
+The only niggle I have is why I'm not getting to put `200ms` - why `199ms`?
+Looking back at the docs, there's a note in the
+[time progression syntax](https://rxjs.dev/guide/testing/marble-testing#time-progression-syntax)
+section.
+
+> NOTE: You may have to subtract 1 millisecond from the time you want to progress because the alphanumeric marbles
+> (representing an actual emitted value)
+> advance time 1 virtual frame themselves already, after they emit.
+
+By default 1 frame is 1ms.
+So here's my understanding of the sequence we're describing with `600ms a 199ms a`:
+
+* Progress `600ms`
+* Emit `a`, then advance 1ms (now we're at 601ms)
+* Progress `199ms` (now we're at 800ms)
+* Emit `b`
+
+No more niggle.
+Too Easy.
+
+## Wrapping up
+
+I said in the opening of this post that I don't like RxJS.
+Well... the test tools included in the library, at least, have won my heart.
+I think the marble syntax is expressive and elegant.
+Having given it a fair shake with a more complicated case I think I can see how it would extend to production cases and standup well to the rigours of real life.
+I think as with anything there will be a point where the pattern breaks down or where the complications mount,
+but I suspect for this toolset that point will be well into the weeds.
